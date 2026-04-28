@@ -1,0 +1,76 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #fff7ec;
+  color: #3b2a20;
+  overflow-x: hidden;
+}
+
+.dark body {
+  background: #13111c;
+  color: #fff7ec;
+}
+
+/* When the renderer is loaded in a transparent overlay window the entire
+   page background must be see-through so only the cat + HUD draw pixels. */
+body.blocker-body,
+html:has(body.blocker-body) {
+  background: transparent !important;
+}
+body.blocker-body #root {
+  background: transparent !important;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-bold transition-all
+      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-ginger text-white shadow-soft hover:bg-toast;
+  }
+  .btn-ghost {
+    @apply btn bg-white/60 text-cocoa hover:bg-white dark:bg-white/10 dark:text-cream dark:hover:bg-white/20;
+  }
+  .card {
+    @apply rounded-3xl bg-white/70 p-5 shadow-soft backdrop-blur dark:bg-plum/70;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-bold
+      text-cocoa shadow-sm dark:bg-white/10 dark:text-cream;
+  }
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.bg-dots {
+  background-image: radial-gradient(rgba(201, 122, 63, 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dark .bg-dots {
+  background-image: radial-gradient(rgba(255, 247, 236, 0.08) 1px, transparent 1px);
+}

@@ -1,0 +1,98 @@
+name: Release
+
+# Builds Fat Cat Blocker for macOS + Windows + Linux in parallel and attaches
+# the installers to a GitHub Release.
+#
+# Trigger options:
+#   • Push a tag like `v0.1.0` → cuts a release with all three artifacts
+#   • Manually run from Actions → Release → "Run workflow" (uses current SHA)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact_glob: "release/*.dmg release/*.zip"
+            build_cmd: "npm run dist:mac"
+          - os: windows-latest
+            artifact_glob: "release/*.exe"
+            build_cmd: "npm run dist:win"
+          - os: ubuntu-latest
+            artifact_glob: "release/*.AppImage"
+            build_cmd: "npm run dist:linux"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build app icons
+        run: npm run icons
+
+      - name: Build installer
+        env:
+          # Skip code signing for unsigned builds. To enable signing, define
+          # repository secrets and replace the `false` below with `true`:
+          #
+          #   macOS:  CSC_LINK (.p12 base64), CSC_KEY_PASSWORD,
+          #           APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
+          #   Windows: WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ${{ matrix.build_cmd }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fatcat-${{ matrix.os }}
+          path: |
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+          if-no-files-found: warn
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/*.dmg
+            artifacts/**/*.zip
+            artifacts/**/*.exe
+            artifacts/**/*.AppImage
+          generate_release_notes: true
+          draft: false
+          prerelease: false
