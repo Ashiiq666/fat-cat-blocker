@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -16,16 +16,17 @@ body,
 
 body {
   margin: 0;
-  font-family: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
-  background: #fff7ec;
-  color: #3b2a20;
+  background: #fafafa;
+  color: #18181b;
   overflow-x: hidden;
+  letter-spacing: -0.01em;
 }
 
 .dark body {
-  background: #13111c;
-  color: #fff7ec;
+  background: #09090b;
+  color: #fafafa;
 }
 
 /* When the renderer is loaded in a transparent overlay window the entire
@@ -40,21 +41,47 @@ body.blocker-body #root {
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 font-bold transition-all
-      active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium
+      transition-all duration-150 active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none select-none;
   }
   .btn-primary {
-    @apply btn bg-ginger text-white shadow-soft hover:bg-toast;
+    @apply btn bg-ginger text-white shadow-sm ring-1 ring-inset ring-black/5 hover:bg-toast;
   }
   .btn-ghost {
-    @apply btn bg-white/60 text-cocoa hover:bg-white dark:bg-white/10 dark:text-cream dark:hover:bg-white/20;
+    @apply btn border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900
+      dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100;
+  }
+  /* Square icon-only button used for the theme toggle and toolbar actions. */
+  .btn-icon {
+    @apply grid h-9 w-9 place-items-center rounded-lg border border-zinc-200 bg-white text-zinc-600
+      transition-colors hover:bg-zinc-50 hover:text-zinc-900
+      dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100;
   }
   .card {
-    @apply rounded-3xl bg-white/70 p-5 shadow-soft backdrop-blur dark:bg-plum/70;
+    @apply rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-soft
+      dark:border-zinc-800/80 dark:bg-zinc-900/60;
+  }
+  /* Inset surface for tiles/rows sitting inside a card. */
+  .surface {
+    @apply rounded-xl border border-zinc-200/70 bg-zinc-50/60
+      dark:border-zinc-800/70 dark:bg-zinc-800/25;
   }
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-bold
-      text-cocoa shadow-sm dark:bg-white/10 dark:text-cream;
+    @apply inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1
+      text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300;
+  }
+  /* Small muted section header. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500;
+  }
+  /* Segmented number stepper: [ − value + ] in one bordered pill. */
+  .stepper {
+    @apply flex items-center overflow-hidden rounded-lg border border-zinc-200 bg-white
+      dark:border-zinc-800 dark:bg-zinc-900;
+  }
+  .stepper-btn {
+    @apply grid h-9 w-9 place-items-center text-zinc-500 transition-colors
+      hover:bg-zinc-50 hover:text-zinc-900 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100;
   }
 }
 
@@ -68,9 +95,9 @@ input[type="number"] {
 }
 
 .bg-dots {
-  background-image: radial-gradient(rgba(201, 122, 63, 0.18) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 .dark .bg-dots {
-  background-image: radial-gradient(rgba(255, 247, 236, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
 }

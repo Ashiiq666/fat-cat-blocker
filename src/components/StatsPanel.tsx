@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS, type Stats } from "../lib/types";
 import { moodFor } from "../hooks/useStats";
+import { TrophyIcon, LockIcon } from "./icons";
 
 function formatHM(totalSec: number) {
   const m = Math.floor(totalSec / 60);
@@ -15,69 +16,78 @@ export function StatsPanel({ stats, onReset }: { stats: Stats; onReset: () => vo
 
   return (
     <div className="card">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xl font-extrabold">Stats</h2>
-        <button onClick={onReset} className="text-xs font-bold text-toast hover:underline">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-base font-semibold tracking-tight">Stats</h2>
+        <button
+          onClick={onReset}
+          className="text-xs font-medium text-zinc-500 transition-colors hover:text-ginger dark:text-zinc-400"
+        >
           Reset stats
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <Stat label="Today" value={String(stats.breaksToday)} sub="breaks" />
         <Stat label="Streak" value={String(stats.streak)} sub={`best ${stats.bestStreak}`} />
         <Stat label="Rested" value={formatHM(stats.totalBreakSeconds)} sub="total" />
         <Stat label="All-time" value={String(stats.breaksTaken)} sub="breaks" />
       </div>
 
-      <div className="mt-5 rounded-2xl bg-white/60 p-4 dark:bg-white/5">
+      {/* Cat mood / HP */}
+      <div className="surface mt-3 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-xs font-extrabold uppercase tracking-widest opacity-70">
-              Cat mood
-            </div>
-            <div className="text-lg font-extrabold">
-              {mood.emoji} {mood.label}
-            </div>
+            <div className="eyebrow">Cat mood</div>
+            <div className="mt-0.5 text-sm font-semibold">{mood.label}</div>
           </div>
           <div className="text-right">
-            <div className="text-xs font-extrabold uppercase tracking-widest opacity-70">HP</div>
-            <div className="text-lg font-extrabold tabular-nums">{mood.hp}%</div>
+            <div className="eyebrow">HP</div>
+            <div className="mt-0.5 text-sm font-semibold tabular-nums">{mood.hp}%</div>
           </div>
         </div>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-cocoa/10 dark:bg-white/10">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
           <div
-            className="h-full bg-gradient-to-r from-bubble via-ginger to-mint"
+            className="h-full rounded-full bg-gradient-to-r from-ginger to-mint"
             style={{ width: `${mood.hp}%` }}
           />
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-2 text-xs font-bold opacity-80">
-          <div>🤚 pets · {stats.pets}</div>
-          <div>🐟 fed · {stats.feeds}</div>
-          <div>😾 snoozes · {stats.snoozesUsed}</div>
-          <div>🏆 unlocks · {stats.achievements.length}</div>
+        <div className="mt-3 grid grid-cols-2 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-4">
+          <MoodStat label="Pets" value={stats.pets} />
+          <MoodStat label="Fed" value={stats.feeds} />
+          <MoodStat label="Snoozes" value={stats.snoozesUsed} />
+          <MoodStat label="Unlocks" value={stats.achievements.length} />
         </div>
       </div>
 
+      {/* Achievements */}
       <div className="mt-5">
-        <div className="mb-2 text-xs font-extrabold uppercase tracking-widest opacity-70">
-          Achievements
-        </div>
+        <div className="eyebrow mb-2.5">Achievements</div>
         <div className="grid gap-2 sm:grid-cols-2">
           {ACHIEVEMENTS.map((a) => {
             const got = unlocked.has(a.id);
             return (
               <div
                 key={a.id}
-                className={`flex items-start gap-3 rounded-2xl p-3 transition ${
+                className={`flex items-start gap-3 rounded-xl border p-3 transition ${
                   got
-                    ? "bg-mint/40 dark:bg-mint/15"
-                    : "bg-white/40 opacity-60 dark:bg-white/5"
+                    ? "border-ginger/30 bg-ginger/5"
+                    : "border-zinc-200/70 bg-zinc-50/40 dark:border-zinc-800/70 dark:bg-zinc-800/20"
                 }`}
               >
-                <div className="text-2xl">{got ? "🏆" : "🔒"}</div>
-                <div>
-                  <div className="text-sm font-extrabold">{a.title}</div>
-                  <div className="text-xs opacity-80">{a.description}</div>
+                <div
+                  className={`mt-0.5 shrink-0 ${
+                    got ? "text-ginger" : "text-zinc-400 dark:text-zinc-500"
+                  }`}
+                >
+                  {got ? <TrophyIcon size={18} /> : <LockIcon size={18} />}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                    {a.title}
+                  </div>
+                  <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {a.description}
+                  </div>
                 </div>
               </div>
             );
@@ -90,10 +100,21 @@ export function StatsPanel({ stats, onReset }: { stats: Stats; onReset: () => vo
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-2xl bg-white/60 p-3 text-center dark:bg-white/5">
-      <div className="text-xs font-extrabold uppercase tracking-widest opacity-70">{label}</div>
-      <div className="text-2xl font-black tabular-nums">{value}</div>
-      {sub && <div className="text-xs opacity-70">{sub}</div>}
+    <div className="surface px-3 py-3 text-center">
+      <div className="eyebrow">{label}</div>
+      <div className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
+        {value}
+      </div>
+      {sub && <div className="mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">{sub}</div>}
+    </div>
+  );
+}
+
+function MoodStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="tabular-nums font-semibold text-zinc-700 dark:text-zinc-200">{value}</span>
+      <span>{label}</span>
     </div>
   );
 }

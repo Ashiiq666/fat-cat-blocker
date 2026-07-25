@@ -5,19 +5,21 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Nunito"', "system-ui", "sans-serif"],
-        body: ['"Nunito"', "system-ui", "sans-serif"],
+        display: ['"Inter"', "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        body: ['"Inter"', "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
       },
       colors: {
-        cream: "#FFF7EC",
-        peach: "#FFD9B7",
-        ginger: "#F2A65A",
-        toast: "#C97A3F",
-        cocoa: "#3B2A20",
-        midnight: "#13111C",
-        plum: "#1F1A2E",
-        bubble: "#FFB1C8",
-        mint: "#9BE3C0",
+        // Standard neutral palette + amber accent. Token names are kept for
+        // backward compatibility with existing components.
+        cream: "#FAFAFA", // zinc-50 — light bg
+        peach: "#F4F4F5", // zinc-100 — light surface
+        ginger: "#F59E0B", // amber-500 — primary accent
+        toast: "#D97706", // amber-600 — hover state
+        cocoa: "#18181B", // zinc-900 — dark text on light
+        midnight: "#09090B", // zinc-950 — dark bg
+        plum: "#18181B", // zinc-900 — dark card surface
+        bubble: "#F4F4F5", // zinc-100 — neutral chip bg (was pink)
+        mint: "#22C55E", // green-500 — success accent
       },
       keyframes: {
         wiggle: {
@@ -49,8 +51,8 @@ export default {
         "tail-sway": "tailSway 2.4s ease-in-out infinite",
       },
       boxShadow: {
-        soft: "0 10px 30px -12px rgba(59,42,32,0.25)",
-        glow: "0 0 50px rgba(242,166,90,0.45)",
+        soft: "0 1px 2px rgba(24,24,27,0.04), 0 12px 32px -16px rgba(24,24,27,0.12)",
+        glow: "0 0 40px rgba(245,158,11,0.35)",
       },
     },
   },

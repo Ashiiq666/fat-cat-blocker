@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { fmt } from "../hooks/useTimer";
 import type { Phase, Settings } from "../lib/types";
-import { Cat } from "./Cat";
+import { PlayIcon, PauseIcon, ResetIcon, SkipIcon, CoffeeIcon, ClockIcon } from "./icons";
 
 type Props = {
   phase: Phase;
@@ -24,47 +24,59 @@ export function TimerCard({
   onReset,
   onSkip,
 }: Props) {
-  const total =
-    phase === "break"
-      ? settings.breakMinutes * 60
-      : settings.workMinutes * 60;
+  const isBreak = phase === "break";
+  const total = isBreak ? settings.breakMinutes * 60 : settings.workMinutes * 60;
   const pct = ((total - remaining) / Math.max(1, total)) * 100;
-  const status =
-    phase === "idle"
-      ? "Ready when you are."
-      : phase === "warning"
-      ? "Cat incoming…"
-      : phase === "break"
-      ? "Break in progress · check the cat 🙂"
-      : running
-      ? "Working — the cat is napping."
-      : "Paused.";
 
-  // Circular progress
-  const r = 110;
+  // Accent tracks the current phase: amber focus, green break, red warning.
+  const accent = isBreak ? "#22C55E" : phase === "warning" ? "#EF4444" : "#F59E0B";
+
+  const eyebrow = isBreak
+    ? "Break active"
+    : phase === "idle"
+    ? "Next break in"
+    : phase === "warning"
+    ? "Break starting"
+    : running
+    ? "Focusing"
+    : "Paused";
+
+  const status = isBreak
+    ? "Step away from the screen."
+    : phase === "idle"
+    ? "Press start when you're ready."
+    : phase === "warning"
+    ? "Wrapping up — break incoming."
+    : running
+    ? "Timer is running."
+    : "Timer paused.";
+
+  // Circular progress geometry.
+  const r = 82;
   const c = 2 * Math.PI * r;
 
   return (
-    <div className="card overflow-hidden">
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
-        <div className="relative h-64 w-64 shrink-0">
-          <svg viewBox="0 0 260 260" className="h-full w-full -rotate-90">
+    <div className="card">
+      <div className="flex flex-col items-center gap-7 sm:flex-row sm:gap-8">
+        {/* Progress ring */}
+        <div className="relative h-52 w-52 shrink-0">
+          <svg viewBox="0 0 200 200" className="h-full w-full -rotate-90">
             <circle
-              cx="130"
-              cy="130"
+              cx="100"
+              cy="100"
               r={r}
               fill="none"
               stroke="currentColor"
-              strokeWidth="14"
-              className="text-cocoa/10 dark:text-white/10"
+              strokeWidth="10"
+              className="text-zinc-100 dark:text-zinc-800"
             />
             <motion.circle
-              cx="130"
-              cy="130"
+              cx="100"
+              cy="100"
               r={r}
               fill="none"
-              stroke={phase === "break" ? "#9BE3C0" : phase === "warning" ? "#FFB1C8" : "#F2A65A"}
-              strokeWidth="14"
+              stroke={accent}
+              strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={c}
               animate={{ strokeDashoffset: c - (pct / 100) * c }}
@@ -72,55 +84,56 @@ export function TimerCard({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="text-xs font-extrabold uppercase tracking-widest text-toast">
-              {phase === "break" ? "Break" : phase === "idle" ? "Next break" : "Working"}
+            <div className="eyebrow" style={{ color: accent }}>
+              {eyebrow}
             </div>
-            <div className="font-black tabular-nums leading-none text-cocoa dark:text-cream"
-              style={{ fontSize: 56 }}>
+            <div className="mt-1 font-semibold tabular-nums leading-none tracking-tight text-zinc-900 dark:text-zinc-50" style={{ fontSize: 52 }}>
               {fmt(remaining)}
             </div>
-            <div className="mt-1 text-xs opacity-70">{status}</div>
+            <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{status}</div>
           </div>
         </div>
 
-        <div className="flex-1">
-          <div className="mb-3 flex items-center gap-3">
-            <Cat
-              size={92}
-              color={settings.catColor}
-              expression={phase === "break" ? "happy" : phase === "warning" ? "smug" : "sleepy"}
-              intensity={running ? 0.6 : 0.2}
-            />
-            <div>
-              <div className="text-xs font-extrabold uppercase tracking-widest text-toast">
-                Fat Cat Blocker
-              </div>
-              <h1 className="text-2xl font-black leading-tight">
-                {phase === "break" ? "It’s break o’clock." : "Stay focused, stay round."}
-              </h1>
-              <div className="text-sm opacity-75">
-                {settings.workMinutes}-min focus · {settings.breakMinutes}-min cat
-              </div>
-            </div>
+        {/* Details + controls */}
+        <div className="flex-1 text-center sm:text-left">
+          <h1 className="text-2xl font-semibold leading-tight tracking-tight">
+            {isBreak ? "Break time" : "Stay focused"}
+          </h1>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+            {isBreak
+              ? "The cat is on screen until the timer ends."
+              : "A cat break appears when the timer runs out."}
+          </p>
+
+          {/* Session summary chips */}
+          <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+            <span className="surface inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <ClockIcon size={14} className="text-zinc-400 dark:text-zinc-500" />
+              {settings.workMinutes} min focus
+            </span>
+            <span className="surface inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <CoffeeIcon size={14} className="text-zinc-400 dark:text-zinc-500" />
+              {settings.breakMinutes} min break
+            </span>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {!running && phase !== "break" && (
+          <div className="mt-5 flex flex-wrap justify-center gap-2 sm:justify-start">
+            {!running && !isBreak && (
               <button className="btn-primary" onClick={onStart}>
-                ▶ Start focus
+                <PlayIcon size={16} /> Start focus
               </button>
             )}
-            {running && phase !== "break" && (
+            {running && !isBreak && (
               <button className="btn-ghost" onClick={onPause}>
-                ⏸ Pause
+                <PauseIcon size={16} /> Pause
               </button>
             )}
             <button className="btn-ghost" onClick={onReset}>
-              ⟲ Reset
+              <ResetIcon size={16} /> Reset
             </button>
-            {phase !== "break" && (
-              <button className="btn-ghost" onClick={onSkip} title="Send the cat now">
-                😼 Break now
+            {!isBreak && (
+              <button className="btn-ghost" onClick={onSkip} title="Start a break now">
+                <SkipIcon size={16} /> Break now
               </button>
             )}
           </div>
