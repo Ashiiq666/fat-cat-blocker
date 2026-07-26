@@ -19,6 +19,9 @@ export default function App() {
   const [snoozedThisCycle, setSnoozedThisCycle] = useState(false);
   const breakStartRef = useRef<number | null>(null);
   const snoozedRef = useRef(false);
+  // Guards against finalizing the same break twice (e.g. the natural-expiry
+  // path and an overlay "done" click racing). Reset when a new break starts.
+  const finalizedRef = useRef(false);
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const pushToast = useCallback((text: string, emoji?: string) => {
@@ -31,8 +34,34 @@ export default function App() {
     pushToast("Cat incoming…", "😾");
   }, [pushToast]);
 
+  // Records a completed break and tears down the cat overlay. Shared by the
+  // natural-expiry path (onBreakEnd) and the manual "done" path (handleFinish),
+  // guarded so it runs at most once per break cycle. Does NOT reset the timer —
+  // the manual path resets it separately; on natural expiry useTimer already
+  // reset itself to idle.
+  const finalizeBreak = useCallback(() => {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    const elapsed = breakStartRef.current
+      ? (Date.now() - breakStartRef.current) / 1000
+      : settings.breakMinutes * 60;
+    const wasSnoozed = snoozedRef.current;
+    recordBreak(elapsed, wasSnoozed);
+    pushToast(
+      wasSnoozed ? "Streak reset" : "Nice. Streak +1",
+      wasSnoozed ? "💔" : "🏆"
+    );
+    if (desktop.available) void desktop.endBlock();
+  }, [recordBreak, pushToast, settings.breakMinutes]);
+
+  // Fired by useTimer when the break timer runs to zero on its own.
+  const handleBreakEnd = useCallback(() => {
+    finalizeBreak();
+  }, [finalizeBreak]);
+
   const onBreakStart = useCallback(() => {
     breakStartRef.current = Date.now();
+    finalizedRef.current = false;
     setBreakSnapshot({ pets: stats.pets, feeds: stats.feeds });
     setSnoozedThisCycle(false);
     snoozedRef.current = false;
@@ -63,21 +92,14 @@ export default function App() {
     finishBreakNow,
     snooze,
     skipToBreak,
-  } = useTimer({ settings, onBreakStart, onWarning });
+  } = useTimer({ settings, onBreakStart, onWarning, onBreakEnd: handleBreakEnd });
 
+  // Manual finish (overlay "done" button / auto-dismiss): record + tear down
+  // the overlay, then reset the still-running break timer back to idle.
   const handleFinish = useCallback(() => {
-    const elapsed = breakStartRef.current
-      ? (Date.now() - breakStartRef.current) / 1000
-      : settings.breakMinutes * 60;
-    const wasSnoozed = snoozedRef.current;
-    recordBreak(elapsed, wasSnoozed);
-    pushToast(
-      wasSnoozed ? "Streak reset 😾" : "Nice. Streak +1",
-      wasSnoozed ? "💔" : "🏆"
-    );
-    if (desktop.available) void desktop.endBlock();
+    finalizeBreak();
     finishBreakNow();
-  }, [recordBreak, pushToast, finishBreakNow, settings.breakMinutes]);
+  }, [finalizeBreak, finishBreakNow]);
 
   const handleSnooze = useCallback(() => {
     setSnoozedThisCycle(true);

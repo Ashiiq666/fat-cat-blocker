@@ -6,9 +6,10 @@ type Args = {
   settings: Settings;
   onBreakStart: () => void;
   onWarning: () => void;
+  onBreakEnd: () => void;
 };
 
-export function useTimer({ settings, onBreakStart, onWarning }: Args) {
+export function useTimer({ settings, onBreakStart, onWarning, onBreakEnd }: Args) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(settings.workMinutes * 60);
@@ -49,6 +50,10 @@ export function useTimer({ settings, onBreakStart, onWarning }: Args) {
             if (settings.soundEnabled) sounds.chime();
             setPhase("idle");
             setRunning(false);
+            // Break ran to completion — notify the app so it can record the
+            // break and tear down the overlay windows. Without this the cat
+            // overlay would linger after the timer hits zero.
+            onBreakEnd();
             return settings.workMinutes * 60;
           }
         }
@@ -64,6 +69,7 @@ export function useTimer({ settings, onBreakStart, onWarning }: Args) {
     settings.breakMinutes,
     onBreakStart,
     onWarning,
+    onBreakEnd,
   ]);
 
   const start = useCallback(() => {
