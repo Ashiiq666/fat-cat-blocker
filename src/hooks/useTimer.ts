@@ -32,7 +32,12 @@ export function useTimer({ settings, onBreakStart, onWarning, onBreakEnd }: Args
       setRemaining((r) => {
         const next = r - 1;
         const cur = phaseRef.current;
-        if (cur === "working" && next === settings.warnSeconds && !warnedRef.current) {
+        if (
+          cur === "working" &&
+          settings.warnSeconds > 0 &&
+          next === settings.warnSeconds &&
+          !warnedRef.current
+        ) {
           warnedRef.current = true;
           if (settings.soundEnabled) sounds.warning();
           setPhase("warning");

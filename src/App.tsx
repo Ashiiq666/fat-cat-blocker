@@ -31,8 +31,26 @@ export default function App() {
   }, []);
 
   const onWarning = useCallback(() => {
-    pushToast("Cat incoming…", "😾");
-  }, [pushToast]);
+    const secs = settings.warnSeconds;
+    const when =
+      secs >= 60
+        ? `${Math.round(secs / 60)} minute${secs >= 120 ? "s" : ""}`
+        : `${secs} seconds`;
+    pushToast(`Break in ${when}`, "😾");
+    // Fire a real OS notification so the heads-up reaches the user even while
+    // they're working in another app (the in-app toast alone is invisible
+    // then). Setting a warn time is itself the opt-in, so this doesn't depend
+    // on the separate "Desktop notifications" toggle.
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("Break coming up", {
+          body: `Your cat break starts in ${when}.`,
+        });
+      } catch {
+        /* no-op */
+      }
+    }
+  }, [pushToast, settings.warnSeconds]);
 
   // Records a completed break and tears down the cat overlay. Shared by the
   // natural-expiry path (onBreakEnd) and the manual "done" path (handleFinish),

@@ -160,7 +160,7 @@ export function SettingsPanel({ settings, update, onReset }: Props) {
         />
         <NumberRow
           label="Heads-up warning"
-          hint="Get notified this long before a break begins."
+          hint="Notify me this long before a break begins (0 = off)."
           value={settings.warnSeconds}
           min={0}
           max={120}
