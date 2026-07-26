@@ -162,7 +162,6 @@ export function CatVisual(props: Props) {
       };
 
   const onMediaError = () => {
-    // eslint-disable-next-line no-console
     console.warn("[CatVisual] media failed → fallback to SVG");
     resolvedSource = { kind: "svg" };
     setSource({ kind: "svg" });
