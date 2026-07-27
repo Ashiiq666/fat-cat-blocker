@@ -3,9 +3,10 @@ import { DEFAULT_SETTINGS, type Settings } from "../lib/types";
 import { KEYS, load, save } from "../lib/storage";
 
 export function useSettings() {
-  const [settings, setSettings] = useState<Settings>(() =>
-    load<Settings>(KEYS.settings, DEFAULT_SETTINGS)
-  );
+  const [settings, setSettings] = useState<Settings>(() => {
+    const loaded = load<Settings>(KEYS.settings, DEFAULT_SETTINGS);
+    return { ...loaded, breakMinutes: Math.min(5, Math.max(1, loaded.breakMinutes)) };
+  });
 
   useEffect(() => save(KEYS.settings, settings), [settings]);
 

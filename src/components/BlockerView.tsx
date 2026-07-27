@@ -4,30 +4,83 @@
 // (the user can SEE their own apps), but every click is absorbed by the
 // Electron window above so they cannot interact with whatever is behind.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Cat } from "./Cat";
+import { ChromaKeyVideo } from "./ChromaKeyVideo";
 import { fmt } from "../hooks/useTimer";
 import { desktop, type BlockerState } from "../lib/desktop";
-import type { CatColor } from "../lib/types";
 
-const SASS = [
-  "Sit. Stay. The code can wait.",
-  "I am Loaf. I block your view.",
-  "Tab? I don’t know her. Take your break.",
-  "You wouldn’t skip a meal. Don’t skip a break.",
-  "Your spine called. It says hi.",
-  "Cute, but no. Break first.",
+// Memoized cat container — re-renders only when its own props change
+// (exiting / shake). The parent BlockerView re-renders every
+// second on timer ticks; this component's referential equality on props
+// stops React from re-rendering the cat or framer-motion from re-evaluating
+// its animation, so the cat just sits and plays the looped video.
+// Must be base-relative, not "/catvideo.mp4". Packaged builds are loaded over
+// file://, where a root-absolute path resolves against the *filesystem* root
+// rather than the app bundle, so the video silently 404s and the break shows
+// an empty screen. A dev server hides this, because there "/" is the web root.
+const CAT_VIDEO_SRC = `${import.meta.env.BASE_URL}catvideo.mp4`;
+
+const CAT_VIDEO_STYLE: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  display: "block",
+  pointerEvents: "none",
+  // `contain` (not `cover`) keeps the whole cat in frame so the head isn't
+  // clipped when the cat sits up at the end of the clip.
+  objectFit: "contain",
+  objectPosition: "50% 100%",
+};
+// Gentle rest reminders that rotate under the timer through the break.
+const REST_MESSAGES = [
+  "Drink some water",
+  "Take a walk around the office",
+  "Stretch your body — slowly",
+  "Calm down. It’s your time to rest.",
+  "I’m not disturbing you, just take a rest",
+  "Look out the window for a minute",
+  "Close your eyes. Breathe deep.",
+  "Roll your shoulders & neck",
+  "Stand up. Move. Reset.",
+  "Your screen will wait. You won’t.",
 ];
 
-const ACTIVITIES = [
-  { icon: "💧", title: "Hydrate", text: "Drink a full glass of water." },
-  { icon: "👀", title: "20-20-20", text: "Look 20 ft away for 20 seconds." },
-  { icon: "🤸", title: "Stretch", text: "Roll your shoulders & neck slowly." },
-  { icon: "🌬️", title: "Breathe", text: "4 in · 7 hold · 8 out. Three rounds." },
-  { icon: "🚶", title: "Walk", text: "Stand up. Take 30 steps." },
-  { icon: "☀️", title: "Window", text: "Find natural light for a minute." },
-];
+const CatContainer = memo(function CatContainer({
+  exiting,
+  shake,
+}: {
+  exiting: boolean;
+  shake: number;
+}) {
+  // Cat fades in 1 s after the overlay opens, fades out on dismiss.
+  // Shake jiggles the container briefly when a blocked shortcut is pressed.
+  const animate = exiting
+    ? { opacity: 0 }
+    : shake % 2
+    ? { x: ["0vw", "-0.6vw", "0.6vw", "0vw"], opacity: 1 }
+    : { opacity: 1, x: 0 };
+  const transition = exiting
+    ? { opacity: { duration: 0.8 } }
+    : shake
+    ? { duration: 0.4 }
+    : { opacity: { delay: 1.0, duration: 0.6 } };
+  return (
+    <motion.div
+      key={`cat-${shake}`}
+      className="fixed inset-0 z-0"
+      style={{ pointerEvents: "none" }}
+      initial={{ opacity: 0 }}
+      animate={animate}
+      transition={transition}
+    >
+      {/* The clip runs once (cat walks in from the left, settles, lies down)
+          and then loops its last few seconds, where the cat is asleep and
+          only breathing — so a long break doesn't replay the walk-in over
+          and over. Any tail from ~3 s up loops without a visible seam. */}
+      <ChromaKeyVideo src={CAT_VIDEO_SRC} style={CAT_VIDEO_STYLE} tailLoopSeconds={4} />
+    </motion.div>
+  );
+});
 
 export function BlockerView() {
   const [state, setState] = useState<BlockerState>({
@@ -39,15 +92,11 @@ export function BlockerView() {
   });
   const [exiting, setExiting] = useState(false);
   const [shake, setShake] = useState(0);
-  const [sassIdx, setSassIdx] = useState(0);
+  const [restIdx, setRestIdx] = useState(() =>
+    Math.floor(Math.random() * REST_MESSAGES.length)
+  );
   const initialised = useRef(false);
 
-  // Walks in from the left or the right (chosen once per mount).
-  const fromLeft = useMemo(() => Math.random() < 0.5, []);
-  const activity = useMemo(
-    () => ACTIVITIES[Math.floor(Math.random() * ACTIVITIES.length)],
-    []
-  );
 
   // Make the body transparent so only what we draw shows through the
   // Electron transparent window.
@@ -82,10 +131,10 @@ export function BlockerView() {
     };
   }, []);
 
-  // Rotate sass every 6 s.
+  // Rotate the rest reminder every 6 s.
   useEffect(() => {
     const id = window.setInterval(
-      () => setSassIdx((i) => (i + 1) % SASS.length),
+      () => setRestIdx((i) => (i + 1) % REST_MESSAGES.length),
       6000
     );
     return () => window.clearInterval(id);
@@ -100,19 +149,17 @@ export function BlockerView() {
   }, []);
 
   const finishable = initialised.current && state.remainingSec <= 0;
-  const pct = Math.min(
-    100,
-    ((state.totalSec - state.remainingSec) / Math.max(1, state.totalSec)) * 100
-  );
 
-  const sideOff = fromLeft ? "-60vw" : "60vw";
-  const exitOff = fromLeft ? "60vw" : "-60vw"; // exits the opposite way
-
-  // Cat sizing — comfortably big but not eating the entire screen.
-  const catSize = useMemo(
-    () => Math.min(720, Math.max(380, window.innerWidth * 0.42)),
-    []
-  );
+  // Auto-dismiss the moment the break timer hits zero — no user click needed.
+  // The slide-out animation runs (1.8 s) before main tears down the overlays.
+  useEffect(() => {
+    if (!finishable || exiting) return;
+    setExiting(true);
+    const id = window.setTimeout(() => {
+      void desktop.requestDone();
+    }, 1900);
+    return () => window.clearTimeout(id);
+  }, [finishable, exiting]);
 
   function handleDone() {
     if (!finishable || exiting) return;
@@ -134,179 +181,90 @@ export function BlockerView() {
   return (
     <div
       className="fixed inset-0 select-none overflow-hidden"
-      // Near-opaque dark backdrop so macOS reliably captures every click
-      // and we don't lose interaction events to whatever app is behind.
-      // Backdrop-blur softens the underlying desktop into a "you're paused"
-      // visual without hiding it completely — same look as Cat Gatekeeper.
       style={{
         background:
-          "radial-gradient(ellipse at 50% 70%, rgba(15,12,22,0.62) 0%, rgba(15,12,22,0.86) 70%, rgba(15,12,22,0.94) 100%)",
+          "radial-gradient(ellipse at 50% 70%, rgba(15,12,22,0.45) 0%, rgba(15,12,22,0.72) 70%, rgba(15,12,22,0.86) 100%)",
         backdropFilter: "blur(6px) saturate(0.9)",
         WebkitBackdropFilter: "blur(6px) saturate(0.9)",
       }}
     >
-      {/* Floating timer pill — sits near the top, fades in once the cat is in place */}
+      {/* The cat — full-screen chroma-keyed video. Fades in 1 s after open.
+          Lives in a memoized child so it doesn't re-render on per-second
+          timer ticks. */}
+      <CatContainer exiting={exiting} shake={shake} />
+
+      {/* Big timer + rotating rest message — top-left corner */}
       <AnimatePresence>
         {!exiting && (
           <motion.div
-            key="hud"
-            initial={{ y: -40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -60, opacity: 0 }}
-            transition={{ delay: 1.6, duration: 0.5 }}
-            className="pointer-events-none absolute left-1/2 top-[6vh] z-10 flex -translate-x-1/2 flex-col items-center gap-3"
+            key="timer"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ delay: 1.4, duration: 0.5 }}
+            className="pointer-events-none absolute left-[5vw] top-[5vh] z-20 select-none text-white"
+            style={{
+              textShadow: "0 4px 24px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.45)",
+            }}
           >
-            <div className="rounded-full bg-cocoa/95 px-4 py-1 text-xs font-extrabold uppercase tracking-widest text-cream shadow-soft">
-              Break time · cat in charge
-            </div>
             <div
-              className="rounded-3xl bg-white/95 px-8 py-3 font-black tabular-nums text-cocoa shadow-soft"
-              style={{ fontSize: 64, fontVariantNumeric: "tabular-nums" }}
+              className="font-black tabular-nums"
+              style={{
+                fontSize: "clamp(72px, 12vw, 200px)",
+                lineHeight: 1,
+                fontVariantNumeric: "tabular-nums",
+              }}
             >
               {fmt(state.remainingSec)}
             </div>
-            <div className="h-2 w-72 overflow-hidden rounded-full bg-white/40">
-              <motion.div
-                className="h-full bg-ginger"
-                animate={{ width: `${pct}%` }}
-                transition={{ ease: "linear" }}
-              />
-            </div>
-            <div className="rounded-full bg-cocoa/85 px-4 py-1 text-sm font-bold text-cream shadow-soft">
-              {SASS[sassIdx]}
+            <div
+              className="mt-3 max-w-[40vw] font-semibold text-white/90"
+              style={{ fontSize: "clamp(18px, 1.6vw, 28px)", lineHeight: 1.3 }}
+            >
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={restIdx}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  {REST_MESSAGES[restIdx]}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* The cat — walks in, sits with breathing, walks out on done/snooze */}
-      <motion.div
-        key={`cat-${shake}`}
-        className="absolute left-1/2 z-20"
-        style={{ bottom: "8vh", x: "-50%" }}
-        initial={{
-          x: `calc(-50% + ${sideOff})`,
-          y: 0,
-          rotate: fromLeft ? -2 : 2,
-          opacity: 0,
-        }}
-        animate={
-          exiting
-            ? {
-                x: `calc(-50% + ${exitOff})`,
-                y: [0, -10, 0, -10, 0, -10, 0],
-                rotate: fromLeft ? 2 : -2,
-                opacity: [1, 1, 0],
-              }
-            : shake % 2
-            ? { x: ["-50%", "-46%", "-54%", "-50%"], y: [0, -8, 0] }
-            : {
-                x: "-50%",
-                y: [0, -14, 0, -14, 0, -10, 0],
-                rotate: 0,
-                opacity: 1,
-              }
-        }
-        transition={
-          exiting
-            ? {
-                x: { duration: 1.8, ease: [0.6, 0, 0.4, 1] },
-                y: {
-                  duration: 0.55,
-                  repeat: 3,
-                  ease: "easeInOut",
-                  times: [0, 0.5, 1],
-                },
-                opacity: { duration: 1.8, times: [0, 0.7, 1] },
-                rotate: { duration: 1.8 },
-              }
-            : shake
-            ? { duration: 0.5 }
-            : {
-                x: { duration: 2.2, ease: [0.22, 0.61, 0.36, 1] },
-                y: {
-                  duration: 0.52,
-                  repeat: 4,
-                  ease: "easeInOut",
-                },
-                opacity: { duration: 0.4 },
-                rotate: { duration: 1.2 },
-              }
-        }
-      >
-        {/* paw shadow */}
-        <motion.div
-          className="absolute left-1/2 top-full h-3 w-2/3 -translate-x-1/2 rounded-full bg-black/35 blur-md"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: exiting ? 0 : 0.6, scale: [0.9, 1, 0.9] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <Cat
-          color={state.catColor as CatColor}
-          expression={
-            exiting ? "happy" : state.remainingSec > state.totalSec * 0.4 ? "smug" : "sleepy"
-          }
-          size={catSize}
-          intensity={0.9}
-          fed={state.feedCount}
-          pets={state.petCount}
-        />
-      </motion.div>
-
-      {/* Action panel — appears next to the seated cat */}
+      {/* Tiny corner controls — Snooze + Done */}
       <AnimatePresence>
         {!exiting && (
           <motion.div
-            key="panel"
-            initial={{ y: 60, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 60, opacity: 0 }}
-            transition={{ delay: 1.8, duration: 0.5 }}
-            className="pointer-events-auto absolute bottom-[5vh] left-1/2 z-30 flex w-[min(680px,92vw)] -translate-x-1/2 flex-col items-center gap-3 rounded-3xl bg-white/95 p-4 shadow-soft backdrop-blur dark:bg-plum/95"
+            key="corner-controls"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ delay: 1.6, duration: 0.4 }}
+            className="pointer-events-auto absolute right-[2vw] top-[3vh] z-30 flex items-center gap-2"
           >
-            <div className="flex items-center gap-3 rounded-2xl bg-cream/80 px-3 py-2 text-cocoa dark:bg-white/10 dark:text-cream">
-              <span className="text-2xl">{activity.icon}</span>
-              <div className="text-left">
-                <div className="text-xs font-extrabold uppercase tracking-wider text-toast">
-                  {activity.title}
-                </div>
-                <div className="text-sm font-semibold">{activity.text}</div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                className="btn bg-bubble text-cocoa shadow-sm hover:brightness-105"
-                onClick={() => {
-                  void desktop.requestPet();
-                  setState((s) => ({ ...s, petCount: s.petCount + 1 }));
-                }}
-              >
-                🤚 Pet ({state.petCount})
-              </button>
-              <button
-                className="btn bg-mint text-cocoa shadow-sm hover:brightness-105"
-                onClick={() => {
-                  void desktop.requestFeed();
-                  setState((s) => ({ ...s, feedCount: s.feedCount + 1 }));
-                }}
-              >
-                🐟 Feed ({state.feedCount})
-              </button>
-              <button
-                className="btn bg-white/70 text-cocoa shadow-sm hover:bg-white dark:bg-white/10 dark:text-cream dark:hover:bg-white/20"
-                onClick={handleSnooze}
-                title="The cat will judge you."
-              >
-                😾 Snooze
-              </button>
-              <button
-                className={`btn-primary ${finishable ? "" : "opacity-60"}`}
-                onClick={handleDone}
-                disabled={!finishable}
-              >
-                {finishable ? "Done — back to work" : `Wait ${fmt(state.remainingSec)}`}
-              </button>
-            </div>
+            <button
+              onClick={handleSnooze}
+              className="rounded-full border border-white/20 bg-black/35 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/90 backdrop-blur transition hover:bg-black/55 hover:text-white"
+            >
+              Snooze
+            </button>
+            <button
+              onClick={handleDone}
+              disabled={!finishable}
+              className={`rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider backdrop-blur transition ${
+                finishable
+                  ? "bg-white text-cocoa shadow hover:brightness-105"
+                  : "border border-white/15 bg-black/25 text-white/40"
+              }`}
+            >
+              {finishable ? "Done" : fmt(state.remainingSec)}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

@@ -22,6 +22,7 @@
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.19.0",
     "autoprefixer": "^10.5.0",
     "framer-motion": "^12.38.0",
     "postcss": "^8.5.12",
@@ -72,11 +73,15 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["universal"]
+          "arch": [
+            "universal"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["universal"]
+          "arch": [
+            "universal"
+          ]
         }
       ],
       "extendInfo": {
@@ -93,8 +98,17 @@
         "height": 380
       },
       "contents": [
-        { "x": 140, "y": 180, "type": "file" },
-        { "x": 400, "y": 180, "type": "link", "path": "/Applications" }
+        {
+          "x": 140,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 400,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     },
     "win": {
@@ -102,11 +116,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
@@ -123,7 +141,9 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "category": "Utility"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSettings } from "./hooks/useSettings";
 import { useStats } from "./hooks/useStats";
 import { useTimer } from "./hooks/useTimer";
@@ -7,6 +7,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { StatsPanel } from "./components/StatsPanel";
 import { BlockerOverlay } from "./components/BlockerOverlay";
 import { Toasts, type ToastItem } from "./components/Toast";
+import { BrandMark, SunIcon, MoonIcon } from "./components/icons";
 import { desktop } from "./lib/desktop";
 import { sounds } from "./lib/sound";
 
@@ -18,6 +19,9 @@ export default function App() {
   const [snoozedThisCycle, setSnoozedThisCycle] = useState(false);
   const breakStartRef = useRef<number | null>(null);
   const snoozedRef = useRef(false);
+  // Guards against finalizing the same break twice (e.g. the natural-expiry
+  // path and an overlay "done" click racing). Reset when a new break starts.
+  const finalizedRef = useRef(false);
 
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const pushToast = useCallback((text: string, emoji?: string) => {
@@ -27,11 +31,55 @@ export default function App() {
   }, []);
 
   const onWarning = useCallback(() => {
-    pushToast("Cat incoming…", "😾");
-  }, [pushToast]);
+    const secs = settings.warnSeconds;
+    const when =
+      secs >= 60
+        ? `${Math.round(secs / 60)} minute${secs >= 120 ? "s" : ""}`
+        : `${secs} seconds`;
+    pushToast(`Break in ${when}`, "😾");
+    // Fire a real OS notification so the heads-up reaches the user even while
+    // they're working in another app (the in-app toast alone is invisible
+    // then). Setting a warn time is itself the opt-in, so this doesn't depend
+    // on the separate "Desktop notifications" toggle.
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("Break coming up", {
+          body: `Your cat break starts in ${when}.`,
+        });
+      } catch {
+        /* no-op */
+      }
+    }
+  }, [pushToast, settings.warnSeconds]);
+
+  // Records a completed break and tears down the cat overlay. Shared by the
+  // natural-expiry path (onBreakEnd) and the manual "done" path (handleFinish),
+  // guarded so it runs at most once per break cycle. Does NOT reset the timer —
+  // the manual path resets it separately; on natural expiry useTimer already
+  // reset itself to idle.
+  const finalizeBreak = useCallback(() => {
+    if (finalizedRef.current) return;
+    finalizedRef.current = true;
+    const elapsed = breakStartRef.current
+      ? (Date.now() - breakStartRef.current) / 1000
+      : settings.breakMinutes * 60;
+    const wasSnoozed = snoozedRef.current;
+    recordBreak(elapsed, wasSnoozed);
+    pushToast(
+      wasSnoozed ? "Streak reset" : "Nice. Streak +1",
+      wasSnoozed ? "💔" : "🏆"
+    );
+    if (desktop.available) void desktop.endBlock();
+  }, [recordBreak, pushToast, settings.breakMinutes]);
+
+  // Fired by useTimer when the break timer runs to zero on its own.
+  const handleBreakEnd = useCallback(() => {
+    finalizeBreak();
+  }, [finalizeBreak]);
 
   const onBreakStart = useCallback(() => {
     breakStartRef.current = Date.now();
+    finalizedRef.current = false;
     setBreakSnapshot({ pets: stats.pets, feeds: stats.feeds });
     setSnoozedThisCycle(false);
     snoozedRef.current = false;
@@ -62,21 +110,14 @@ export default function App() {
     finishBreakNow,
     snooze,
     skipToBreak,
-  } = useTimer({ settings, onBreakStart, onWarning });
+  } = useTimer({ settings, onBreakStart, onWarning, onBreakEnd: handleBreakEnd });
 
+  // Manual finish (overlay "done" button / auto-dismiss): record + tear down
+  // the overlay, then reset the still-running break timer back to idle.
   const handleFinish = useCallback(() => {
-    const elapsed = breakStartRef.current
-      ? (Date.now() - breakStartRef.current) / 1000
-      : settings.breakMinutes * 60;
-    const wasSnoozed = snoozedRef.current;
-    recordBreak(elapsed, wasSnoozed);
-    pushToast(
-      wasSnoozed ? "Streak reset 😾" : "Nice. Streak +1",
-      wasSnoozed ? "💔" : "🏆"
-    );
-    if (desktop.available) void desktop.endBlock();
+    finalizeBreak();
     finishBreakNow();
-  }, [recordBreak, pushToast, finishBreakNow, settings.breakMinutes]);
+  }, [finalizeBreak, finishBreakNow]);
 
   const handleSnooze = useCallback(() => {
     setSnoozedThisCycle(true);
@@ -185,53 +226,51 @@ export default function App() {
     };
   }, [settings.soundEnabled]);
 
-  const sectionDots = useMemo(
-    () => (
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-dots opacity-60" />
-    ),
-    []
-  );
+  const statusMeta =
+    phase === "break"
+      ? { label: "Break active", dot: "bg-mint" }
+      : phase === "warning"
+      ? { label: "Break soon", dot: "bg-ginger" }
+      : phase === "working"
+      ? running
+        ? { label: "Focusing", dot: "bg-ginger" }
+        : { label: "Paused", dot: "bg-zinc-400" }
+      : { label: "Idle", dot: "bg-zinc-400" };
 
   return (
     <div className="relative min-h-screen">
-      {sectionDots}
-
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 pt-6">
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-4 pt-7">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ginger text-xl shadow-soft">
-            🐱
+          <div className="grid h-10 w-10 place-items-center rounded-xl border border-zinc-200 bg-white text-ginger shadow-soft dark:border-zinc-800 dark:bg-zinc-900">
+            <BrandMark size={20} />
           </div>
           <div>
-            <div className="text-xs font-extrabold uppercase tracking-widest text-toast">
+            <div className="text-[15px] font-semibold leading-tight tracking-tight">
               Fat Cat Blocker
             </div>
-            <div className="text-sm opacity-70">
-              Take your break. The cat insists.
+            <div className="text-[13px] text-zinc-500 dark:text-zinc-400">
+              Focus timer with enforced breaks
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="chip">
-            {phase === "break"
-              ? "🐱 Break"
-              : phase === "working" || phase === "warning"
-              ? running
-                ? "● Focus"
-                : "⏸ Paused"
-              : "Idle"}
+            <span className={`h-1.5 w-1.5 rounded-full ${statusMeta.dot}`} />
+            {statusMeta.label}
           </span>
           <button
-            className="btn-ghost h-10 px-3 py-2 text-sm"
+            className="btn-icon"
             onClick={() => update("darkMode", !settings.darkMode)}
-            aria-label="toggle theme"
+            aria-label="Toggle theme"
+            title="Toggle theme"
           >
-            {settings.darkMode ? "☀️" : "🌙"}
+            {settings.darkMode ? <SunIcon /> : <MoonIcon />}
           </button>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-5xl gap-6 px-4 pb-16 pt-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <main className="mx-auto grid max-w-5xl gap-5 px-4 pb-16 pt-6 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
           <TimerCard
             phase={phase}
             running={running}
@@ -244,37 +283,17 @@ export default function App() {
           />
           <StatsPanel stats={stats} onReset={resetStats} />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-5">
           <SettingsPanel
             settings={settings}
             update={update}
             onReset={resetSettings}
           />
-          <div className="card">
-            <h3 className="mb-2 text-sm font-extrabold uppercase tracking-widest opacity-70">
-              Tips
-            </h3>
-            <ul className="space-y-2 text-sm opacity-90">
-              <li>
-                • The cat walks in from the side and sits on every screen until
-                the timer hits zero.
-              </li>
-              <li>
-                • <span className="font-bold">Pet</span> &{" "}
-                <span className="font-bold">Feed</span> the cat for stat
-                bonuses & achievements.
-              </li>
-              <li>• Snoozing breaks your streak. The cat remembers.</li>
-              <li>
-                • Cmd+Q / Cmd+M / Cmd+W are blocked while a break is active.
-              </li>
-            </ul>
-          </div>
         </div>
       </main>
 
-      <footer className="pb-8 text-center text-xs opacity-60">
-        Made with 🐟 for backs that hurt. All data stays on your machine.
+      <footer className="pb-8 text-center text-xs text-zinc-400 dark:text-zinc-500">
+        All data stays on your machine.
       </footer>
 
       {/* Browser fallback: in-page overlay only when not running in Electron. */}
