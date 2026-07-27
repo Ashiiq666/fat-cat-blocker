@@ -41,15 +41,16 @@ export function TimerCard({
     ? "Focusing"
     : "Paused";
 
+  // Kept short so it fits on one line inside the ring.
   const status = isBreak
-    ? "Step away from the screen."
+    ? "Look away, relax"
     : phase === "idle"
-    ? "Press start when you're ready."
+    ? "Ready when you are"
     : phase === "warning"
-    ? "Wrapping up — break incoming."
+    ? "Break incoming"
     : running
-    ? "Timer is running."
-    : "Timer paused.";
+    ? "Focus in progress"
+    : "Paused";
 
   // Circular progress geometry.
   const r = 82;
@@ -83,14 +84,16 @@ export function TimerCard({
               transition={{ ease: "linear" }}
             />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="eyebrow" style={{ color: accent }}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+            <div className="eyebrow max-w-[11rem]" style={{ color: accent }}>
               {eyebrow}
             </div>
             <div className="mt-1 font-semibold tabular-nums leading-none tracking-tight text-zinc-900 dark:text-zinc-50" style={{ fontSize: 52 }}>
               {fmt(remaining)}
             </div>
-            <div className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{status}</div>
+            <div className="mt-2 max-w-[11rem] text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+              {status}
+            </div>
           </div>
         </div>
 
