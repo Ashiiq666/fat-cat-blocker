@@ -1,4 +1,4 @@
-// Electron main process — Fat Cat Blocker
+// Electron main process — Catnap
 //
 // Architecture:
 //   • controlWindow  : normal window with the React UI (timer/settings/stats).
@@ -47,7 +47,7 @@ function createControlWindow() {
     height: 760,
     minWidth: 720,
     minHeight: 560,
-    title: "Fat Cat Blocker",
+    title: "Catnap",
     backgroundColor: "#FFF7EC",
     show: false,
     autoHideMenuBar: true,
