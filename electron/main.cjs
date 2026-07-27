@@ -115,22 +115,20 @@ function createOverlayForDisplay(display) {
   // some macOS versions demote a transparent window's level after first paint.
   const assertOnTop = () => {
     if (win.isDestroyed()) return;
+    // A screen-saver-level window that joins every Space floats above
+    // everything — the menu bar, the Dock, and apps in their own native
+    // fullscreen Space — WITHOUT itself entering fullscreen. That last part is
+    // the fix: setSimpleFullScreen/setKiosk pushed this overlay into its own
+    // fullscreen Space, so macOS switched to a blank "new page" with the cat
+    // instead of covering the fullscreen app the user was actually working in.
     win.setAlwaysOnTop(true, "screen-saver", 1);
-    win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    if (process.platform === "darwin") {
-      // simpleFullScreen + kiosk on macOS forces this window to cover all
-      // other apps and consume input, even apps in their own native Space.
-      try {
-        if (!win.isSimpleFullScreen()) win.setSimpleFullScreen(true);
-      } catch {
-        /* no-op */
-      }
-      try {
-        win.setKiosk(true);
-      } catch {
-        /* no-op */
-      }
-    } else {
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true,
+    });
+    if (process.platform !== "darwin") {
+      // Windows/Linux have no cross-Space concept; real fullscreen is the
+      // reliable way to cover the taskbar there.
       try {
         if (!win.isFullScreen()) win.setFullScreen(true);
       } catch {
@@ -226,18 +224,6 @@ function endBlock() {
     try {
       if (win.isDestroyed()) continue;
       win.setClosable(true);
-      try {
-        if (win.isKiosk()) win.setKiosk(false);
-      } catch {
-        /* no-op */
-      }
-      if (process.platform === "darwin") {
-        try {
-          if (win.isSimpleFullScreen()) win.setSimpleFullScreen(false);
-        } catch {
-          /* no-op */
-        }
-      }
       win.destroy();
     } catch {
       /* no-op */
