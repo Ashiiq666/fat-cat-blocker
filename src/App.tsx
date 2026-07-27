@@ -90,9 +90,8 @@ export default function App() {
       Notification.permission === "granted"
     ) {
       try {
-        new Notification("Fat Cat Blocker", {
+        new Notification("Catnap", {
           body: "Break time. The cat is on your screen.",
-          icon: "/cat.svg",
         });
       } catch {
         /* no-op */
@@ -177,8 +176,8 @@ export default function App() {
         ? "⚠ soon"
         : phase === "working"
         ? "● focus"
-        : "Fat Cat";
-    document.title = `${m}:${s} · ${tag} · Fat Cat Blocker`;
+        : "ready";
+    document.title = `${m}:${s} · ${tag} · Catnap`;
   }, [remaining, phase]);
 
   const breakSessionPets = Math.max(0, stats.pets - breakSnapshot.pets);
@@ -246,7 +245,7 @@ export default function App() {
           </div>
           <div>
             <div className="text-[15px] font-semibold leading-tight tracking-tight">
-              Fat Cat Blocker
+              Catnap
             </div>
             <div className="text-[13px] text-zinc-500 dark:text-zinc-400">
               Focus timer with enforced breaks

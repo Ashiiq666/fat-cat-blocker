@@ -1,6 +1,6 @@
 # Distribution Guide
 
-How to ship Fat Cat Blocker to real users on macOS, Windows, and Linux.
+How to ship Catnap to real users on macOS, Windows, and Linux.
 
 ---
 
@@ -20,11 +20,11 @@ The output of every build lands in `release/`.
 
 | Platform | File | Notes |
 |---|---|---|
-| macOS | `Fat Cat Blocker-<v>-universal.dmg` | Universal: runs on Intel + Apple Silicon natively |
-| macOS | `Fat Cat Blocker-<v>-universal.zip` | Same, zipped (auto-update friendly) |
-| Windows | `Fat Cat Blocker Setup <v>.exe` | NSIS installer; user picks install dir |
-| Windows | `Fat Cat Blocker <v>.exe` | Portable single-file `.exe` (no install) |
-| Linux | `Fat Cat Blocker-<v>.AppImage` | Run anywhere, no install |
+| macOS | `Catnap-<v>-universal.dmg` | Universal: runs on Intel + Apple Silicon natively |
+| macOS | `Catnap-<v>-universal.zip` | Same, zipped (auto-update friendly) |
+| Windows | `Catnap Setup <v>.exe` | NSIS installer; user picks install dir |
+| Windows | `Catnap <v>.exe` | Portable single-file `.exe` (no install) |
+| Linux | `Catnap-<v>.AppImage` | Run anywhere, no install |
 
 ---
 
