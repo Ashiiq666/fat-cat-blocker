@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Entitlements for the hardened runtime, which notarization requires.
+
+      Electron runs V8, which JIT-compiles JavaScript at runtime. Without these
+      three, the hardened runtime kills the app on launch — so a notarized build
+      would ship and then crash instantly for every user.
+
+      Deliberately NOT sandboxed (no com.apple.security.app-sandbox): Catnap
+      needs system-wide global shortcuts and an always-on-top overlay across
+      every Space, none of which work inside the App Sandbox. Sandboxing is only
+      mandatory for the Mac App Store, not for Developer ID distribution.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+</dict>
+</plist>

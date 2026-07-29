@@ -16,10 +16,11 @@
     "electron": "electron .",
     "electron:dev": "concurrently -k -n vite,electron -c cyan,magenta \"npm:dev\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\"",
     "prebuild:dist": "npm run icons",
-    "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac --universal",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:linux": "npm run build && electron-builder --linux"
+    "dist": "npm run build && electron-builder -c electron-builder.config.cjs",
+    "dist:mac": "npm run build && electron-builder --mac --universal -c electron-builder.config.cjs",
+    "dist:win": "npm run build && electron-builder --win --x64 -c electron-builder.config.cjs",
+    "dist:linux": "npm run build && electron-builder --linux -c electron-builder.config.cjs",
+    "check:notarize": "node scripts/check-notarization.mjs"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.19.0",
@@ -70,6 +71,8 @@
       "icon": "build/icon.png",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
