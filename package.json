@@ -20,17 +20,11 @@
     "dist:mac": "npm run build && electron-builder --mac --universal -c electron-builder.config.cjs",
     "dist:win": "npm run build && electron-builder --win --x64 -c electron-builder.config.cjs",
     "dist:linux": "npm run build && electron-builder --linux -c electron-builder.config.cjs",
-    "check:notarize": "node scripts/check-notarization.mjs"
+    "check:notarize": "node scripts/check-notarization.mjs",
+    "dist:mac:arm64": "npm run build && electron-builder --mac --arm64 -c electron-builder.config.cjs",
+    "dist:mac:x64": "npm run build && electron-builder --mac --x64 -c electron-builder.config.cjs"
   },
-  "dependencies": {
-    "@lottiefiles/dotlottie-react": "^0.19.0",
-    "autoprefixer": "^10.5.0",
-    "framer-motion": "^12.38.0",
-    "postcss": "^8.5.12",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "tailwindcss": "^3.4.19"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.2",
@@ -49,7 +43,14 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
-    "wait-on": "^9.0.5"
+    "wait-on": "^9.0.5",
+    "@lottiefiles/dotlottie-react": "^0.19.0",
+    "autoprefixer": "^10.5.0",
+    "framer-motion": "^12.38.0",
+    "postcss": "^8.5.12",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "tailwindcss": "^3.4.19"
   },
   "build": {
     "appId": "com.catnap.app",
@@ -150,6 +151,10 @@
         }
       ],
       "category": "Utility"
-    }
+    },
+    "electronLanguages": [
+      "en-US"
+    ],
+    "compression": "maximum"
   }
 }
